@@ -28,11 +28,28 @@ const initialize = (io) => {
     // Initialize WhatsApp Client with CustomLocalAuth to save session
     client = new Client({
         authStrategy: new CustomLocalAuth(),
+        
+        // --- NEW: Slow Network Settings ---
+        authTimeoutMs: 120000, // 2 Minute wait karega authenticate hone ka
+        qrMaxRetries: 5,       // 5 baar try karega agar fail hua
+        takeoverOnConflict: true, // Agar purana session atka hai to use force close karega
+        
         puppeteer: {
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+            // Memory Flags (Crash rokne ke liye)
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu'
+            ],
             headless: true,
-            timeout: 60000,          // Browser launch ke liye 1 minute
-            protocolTimeout: 240000, // Protocol timeout ke liye 4 minutes
+            
+            // --- NEW: Timeouts badhaye hain ---
+            timeout: 120000,          // Browser start hone ke liye 2 minute
+            protocolTimeout: 300000,   // Page load hone ke liye 5 minute (Bohot zaroori hai)
             executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         },
         // webVersionCache: {
