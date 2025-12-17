@@ -100,4 +100,30 @@ const getStatus = () => {
     return { isReady, qrCodeUrl };
 };
 
-module.exports = { initialize, sendMessage, getStatus };
+
+// - File ke neeche yeh function add karein
+const requestPairingCode = async (phoneNumber) => {
+    if (!client) {
+        throw new Error('WhatsApp Client not initialized');
+    }
+    // Agar already connected hai toh error do
+    if (isReady) {
+        throw new Error('WhatsApp is already connected!');
+    }
+
+    try {
+        // Number clean karo (sirf digits)
+        const cleanNumber = phoneNumber.replace(/\D/g, '');
+        console.log(`Requesting pairing code for: ${cleanNumber}`);
+        
+        // WhatsApp se code mango
+        const code = await client.requestPairingCode(cleanNumber);
+        return code;
+    } catch (error) {
+        console.error('Pairing Code Error:', error);
+        throw error;
+    }
+};
+
+// module.exports ko update karke naya function add karo:
+module.exports = { initialize, sendMessage, getStatus, requestPairingCode };

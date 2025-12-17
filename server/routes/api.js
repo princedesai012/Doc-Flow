@@ -20,5 +20,8 @@ router.delete('/request/:id', requestController.deleteRequest);
 // Public/Client Routes
 router.get('/request/:token', requestController.getRequest);
 router.post('/upload', upload.single('file'), requestController.uploadDocument);
+//
 
+// Router mein yeh line add karein (jahan baaki routes hain)
+router.post('/whatsapp/pair', requestController.generatePairingCode);
 module.exports = router;

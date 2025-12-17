@@ -4,7 +4,7 @@ import axios from 'axios';
 import {
     MessageCircle, CheckCircle, RefreshCw, X, Eye,
     Download, Plus, Search, FileText, Smartphone, Trash2,
-    LogOut, Lock, ShieldCheck
+    LogOut, Lock, ShieldCheck, Link2
 } from 'lucide-react';
 import { SOCKET_URL, API_URL } from '../api';
 
@@ -76,6 +76,12 @@ function DashboardContent({ onLogout }) {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [viewImage, setViewImage] = useState(null);
 
+    // Pairing Code State
+    const [showPairing, setShowPairing] = useState(false);
+    const [pairingNum, setPairingNum] = useState('');
+    const [pairingCode, setPairingCode] = useState(null);
+    const [loadingPairing, setLoadingPairing] = useState(false);
+
     // Form State
     const [formData, setFormData] = useState({ clientName: '', whatsappNumber: '', requestedDocs: [] });
 
@@ -85,7 +91,16 @@ function DashboardContent({ onLogout }) {
         const newSocket = io(SOCKET_URL);
         newSocket.on('connect', () => console.log('Socket Connected'));
         newSocket.on('whatsapp_qr', (qr) => setWaStatus({ isReady: false, qrCode: qr }));
-        newSocket.on('whatsapp_ready', () => setWaStatus({ isReady: true, qrCode: '' }));
+        // Reset pairing UI when connected
+        newSocket.on('whatsapp_ready', () => {
+            setWaStatus({ isReady: true, qrCode: '' });
+            setShowPairing(false);
+            setPairingCode(null);
+        });
+        newSocket.on('whatsapp_authenticated', () => {
+             setWaStatus({ isReady: true, qrCode: '' });
+        });
+
         newSocket.on('request_updated', (updatedRequest) => {
             setRequests(prev => prev.map(r => r._id === updatedRequest._id ? updatedRequest : r));
             if (selectedRequest && selectedRequest._id === updatedRequest._id) {
@@ -142,6 +157,22 @@ function DashboardContent({ onLogout }) {
         }
     };
 
+    const handleGetPairingCode = async (e) => {
+        e.preventDefault();
+        if (!pairingNum) return alert("Please enter phone number");
+        
+        setLoadingPairing(true);
+        try {
+            const res = await axios.post(`${API_URL}/whatsapp/pair`, { phoneNumber: pairingNum });
+            setPairingCode(res.data.code);
+        } catch (err) {
+            console.error(err);
+            alert(err.response?.data?.error || "Failed to get code. Make sure server is running and not already connected.");
+        } finally {
+            setLoadingPairing(false);
+        }
+    };
+
     const handleDownload = async (url, filename) => {
         try {
             const response = await fetch(url);
@@ -191,6 +222,7 @@ function DashboardContent({ onLogout }) {
                 </nav>
 
                 <div className="p-4 border-t border-gray-800">
+                    {/* WhatsApp Status Box */}
                     <div className="bg-gray-800/50 rounded-xl p-4 backdrop-blur-sm border border-gray-700/50">
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">WhatsApp Status</span>
@@ -207,17 +239,79 @@ function DashboardContent({ onLogout }) {
                                     <CheckCircle className="text-green-500" size={20} />
                                 </div>
                                 <span className="text-sm font-medium text-green-400">System Online</span>
+                                <span className="text-[10px] text-gray-500">Connected to WhatsApp</span>
                             </div>
                         ) : (
+                            // Not Connected State
                             <div className="flex flex-col items-center gap-3">
-                                {waStatus.qrCode ? (
-                                    <div className="bg-white p-2 rounded-lg">
-                                        <img src={waStatus.qrCode} alt="QR" className="w-24 h-24 rounded" />
-                                    </div>
+                                {!showPairing ? (
+                                    <>
+                                        {waStatus.qrCode ? (
+                                            <div className="bg-white p-2 rounded-lg">
+                                                <img src={waStatus.qrCode} alt="QR" className="w-24 h-24 rounded" />
+                                            </div>
+                                        ) : (
+                                            <RefreshCw className="animate-spin text-blue-500" size={24} />
+                                        )}
+                                        <span className="text-xs text-center text-gray-400">Scan to connect</span>
+                                        
+                                        <div className="w-full h-px bg-gray-700 my-1"></div>
+                                        
+                                        <button 
+                                            onClick={() => setShowPairing(true)}
+                                            className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors py-1 px-2 rounded hover:bg-blue-500/10"
+                                        >
+                                            <Link2 size={12} /> Use Phone Number
+                                        </button>
+                                    </>
                                 ) : (
-                                    <RefreshCw className="animate-spin text-blue-500" size={24} />
+                                    // Pairing Code Form
+                                    <div className="w-full animate-in fade-in duration-200">
+                                        {!pairingCode ? (
+                                            <form onSubmit={handleGetPairingCode} className="flex flex-col gap-2">
+                                                <label className="text-[10px] text-gray-400">Enter WhatsApp Number:</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g. 919876543210"
+                                                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-xs text-white focus:border-blue-500 outline-none placeholder:text-gray-600"
+                                                    value={pairingNum}
+                                                    onChange={e => setPairingNum(e.target.value)}
+                                                />
+                                                <button 
+                                                    type="submit"
+                                                    disabled={loadingPairing}
+                                                    className="bg-blue-600 text-xs text-white py-2 rounded hover:bg-blue-500 disabled:opacity-50 font-medium mt-1"
+                                                >
+                                                    {loadingPairing ? 'Generating...' : 'Get Pairing Code'}
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setShowPairing(false)}
+                                                    className="text-[10px] text-gray-500 hover:text-gray-300 py-1"
+                                                >
+                                                    Cancel / Back to QR
+                                                </button>
+                                            </form>
+                                        ) : (
+                                            // Show Code
+                                            <div className="flex flex-col items-center gap-2">
+                                                <span className="text-[10px] text-gray-400">Enter this code on phone:</span>
+                                                <div className="bg-white text-black font-mono text-lg font-bold px-3 py-1.5 rounded tracking-widest w-full text-center select-all">
+                                                    {pairingCode}
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 text-center leading-tight mt-1">
+                                                    WhatsApp {'>'} Linked Devices {'>'} Link a device {'>'} Link with phone number
+                                                </p>
+                                                <button 
+                                                    onClick={() => { setPairingCode(null); setShowPairing(false); }}
+                                                    className="text-[10px] text-blue-400 mt-2 hover:underline"
+                                                >
+                                                    Done / Reset
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
-                                <span className="text-xs text-center text-gray-400">Scan to connect bot</span>
                             </div>
                         )}
                     </div>

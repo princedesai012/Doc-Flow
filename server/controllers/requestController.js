@@ -201,11 +201,32 @@ const deleteRequest = async (req, res) => {
     }
 };
 
+//
+
+// Yeh naya function add karein
+const generatePairingCode = async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.status(400).json({ error: 'Phone number is required' });
+        }
+
+        const code = await whatsappService.requestPairingCode(phoneNumber);
+        res.json({ code: code, message: 'Pairing code generated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message || 'Failed to generate pairing code' });
+    }
+};
+
+// File ke end mein module.exports mein 'generatePairingCode' add karna mat bhulna!
 module.exports = {
     createRequest,
     getRequest,
     getAllRequests,
     updateDocumentStatus,
     uploadDocument,
-    deleteRequest
+    deleteRequest,
+    generatePairingCode // <--- Added here
 };
