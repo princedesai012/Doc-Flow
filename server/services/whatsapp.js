@@ -31,12 +31,14 @@ const initialize = (io) => {
         puppeteer: {
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
             headless: true,
+            timeout: 60000,          // Browser launch ke liye 1 minute
+            protocolTimeout: 240000, // Protocol timeout ke liye 4 minutes
             executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         },
-        webVersionCache: {
-            type: 'remote',
-            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
-        }
+        // webVersionCache: {
+        //     type: 'remote',
+        //     remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+        // }
     });
 
     client.on('qr', (qr) => {
@@ -100,23 +102,34 @@ const getStatus = () => {
     return { isReady, qrCodeUrl };
 };
 
+//
 
-// - File ke neeche yeh function add karein
+// Is function ko poora replace karo:
 const requestPairingCode = async (phoneNumber) => {
     if (!client) {
         throw new Error('WhatsApp Client not initialized');
     }
-    // Agar already connected hai toh error do
     if (isReady) {
         throw new Error('WhatsApp is already connected!');
     }
 
     try {
-        // Number clean karo (sirf digits)
         const cleanNumber = phoneNumber.replace(/\D/g, '');
         console.log(`Requesting pairing code for: ${cleanNumber}`);
+
+        // --- FIX START ---
+        // Hum browser context mein 'onCodeReceivedEvent' function inject kar rahe hain
+        // Kyunki library yeh sirf tab karti hai jab config mein number pehle se ho.
+        try {
+            await client.pupPage.exposeFunction('onCodeReceivedEvent', (code) => {
+                // Jab browser code generate karega, wo yahan aayega
+                return code;
+            });
+        } catch (e) {
+            // Agar function pehle se exposed hai to error ignore karo
+        }
+        // --- FIX END ---
         
-        // WhatsApp se code mango
         const code = await client.requestPairingCode(cleanNumber);
         return code;
     } catch (error) {
@@ -125,5 +138,5 @@ const requestPairingCode = async (phoneNumber) => {
     }
 };
 
-// module.exports ko update karke naya function add karo:
+// Baaki file waisi hi rahegi. Make sure 'requestPairingCode' exports mein added ho.
 module.exports = { initialize, sendMessage, getStatus, requestPairingCode };
