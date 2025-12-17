@@ -28,12 +28,12 @@ const initialize = (io) => {
     // Initialize WhatsApp Client with CustomLocalAuth to save session
     client = new Client({
         authStrategy: new CustomLocalAuth(),
-        
+
         // --- NEW: Slow Network Settings ---
         authTimeoutMs: 120000, // 2 Minute wait karega authenticate hone ka
         qrMaxRetries: 5,       // 5 baar try karega agar fail hua
         takeoverOnConflict: true, // Agar purana session atka hai to use force close karega
-        
+
         puppeteer: {
             // Memory Flags (Crash rokne ke liye)
             args: [
@@ -46,16 +46,16 @@ const initialize = (io) => {
                 '--disable-gpu'
             ],
             headless: true,
-            
+
             // --- NEW: Timeouts badhaye hain ---
             timeout: 120000,          // Browser start hone ke liye 2 minute
             protocolTimeout: 300000,   // Page load hone ke liye 5 minute (Bohot zaroori hai)
             executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         },
-        // webVersionCache: {
-        //     type: 'remote',
-        //     remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
-        // }
+        webVersionCache: {
+            type: 'remote',
+            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+        }
     });
 
     client.on('qr', (qr) => {
@@ -99,7 +99,8 @@ const initialize = (io) => {
 
 const sendMessage = async (to, message) => {
     if (!isReady) {
-        throw new Error('WhatsApp client not ready');
+        console.error('sendMessage called but client is NOT READY. Status:', { isReady, qrCodeUrl: !!qrCodeUrl });
+        throw new Error('WhatsApp client not ready. Please scan QR or link device first.');
     }
     // Ensure the number is in correct format (remove symbols, append @c.us)
     // Assumes input is a full number with country code e.g. 919876543210
@@ -146,7 +147,7 @@ const requestPairingCode = async (phoneNumber) => {
             // Agar function pehle se exposed hai to error ignore karo
         }
         // --- FIX END ---
-        
+
         const code = await client.requestPairingCode(cleanNumber);
         return code;
     } catch (error) {
