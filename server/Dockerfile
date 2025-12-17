@@ -19,6 +19,8 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+
 COPY . .
 
 EXPOSE 5000
