@@ -29,7 +29,7 @@ const initialize = (io) => {
     client = new Client({
         authStrategy: new CustomLocalAuth(),
         puppeteer: {
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
             headless: true
         }
     });
