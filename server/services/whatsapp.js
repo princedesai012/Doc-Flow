@@ -1,5 +1,6 @@
 const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
+const mongoose = require('mongoose');
 const { MongoStore } = require('wwebjs-mongo');
 let client;
 let ioInstance;
