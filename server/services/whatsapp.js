@@ -1,6 +1,6 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
-
+const { MongoStore } = require('wwebjs-mongo');
 let client;
 let ioInstance;
 let qrCodeUrl = '';
@@ -25,9 +25,13 @@ const initialize = (io) => {
         }
     }
 
+    const store = new MongoStore({ mongoose: mongoose });
     // Initialize WhatsApp Client with CustomLocalAuth to save session
     client = new Client({
-        authStrategy: new CustomLocalAuth(),
+        authStrategy: new RemoteAuth({
+        store: store,
+        backupSyncIntervalMs: 300000 // 5 min mein sync karega
+    }),
 
         // --- NEW: Slow Network Settings ---
         authTimeoutMs: 120000, // 2 Minute wait karega authenticate hone ka
@@ -42,10 +46,13 @@ const initialize = (io) => {
                 '--disable-dev-shm-usage',
                 '--disable-accelerated-2d-canvas',
                 '--no-first-run',
+                '--single-process',
                 '--no-zygote',
                 '--disable-gpu'
             ],
             headless: true,
+            authTimeoutMs: 0, // Wait indefinitely for auth
+            qrMaxRetries: 10, // Retries badhao
 
             // --- NEW: Timeouts badhaye hain ---
             timeout: 120000,          // Browser start hone ke liye 2 minute
